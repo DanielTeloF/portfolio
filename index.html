@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Mapa NDVI por parcela</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #111;
+      color: white;
+    }
+    #map { height: 100vh; width: 100vw; }
+    .leaflet-container { background: #111; }
+    .control-panel {
+      position: absolute;
+      top: 10px;
+      left: 100px;
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 8px;
+      z-index: 1001;
+    }
+    select, input, button { margin-top: 5px; width: 120px; }
+    #infoPanel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 100%;
+      background-color: #1c1c1c;
+      padding: 15px;
+      display: none;
+      overflow-y: auto;
+      border-left: 2px solid #333;
+      z-index: 1002;
+    }
+    #infoPanel h3 { margin-top: 0; }
+    #infoPanel img {
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid #444;
+      margin-top: 10px;
+    }
+    #closePanel {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      float: right;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="control-panel">
+    <label for="ndviSelect">Visualizar NDVI:</label><br>
+    <select id="ndviSelect">
+      <option value="abril">22/04</option>
+      <option value="mayo">22/05</option>
+      <option value="junio">16/06</option>
+      <option value="julio">16/07</option>
+      <option value="agosto">10/08</option>
+    </select><br><br>
+    <label for="recintoInput">Buscar recinto:</label><br>
+    <input type="text" id="recintoInput" placeholder="ID Recinto"/>
+    <button onclick="buscarRecinto()">Buscar</button><br><br>
+    <button onclick="mostrarAnomalias()">Mostrar aumentos NDVI</button>
+    <button onclick="quitarAnomalias()">Desmarcar</button>
+  </div>
+  <div id="infoPanel">
+    <button id="closePanel" onclick="cerrarPanel()">✖</button>
+    <div id="infoContent"></div>
+  </div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const bounds = [[37.722664, -4.390214], [37.820108, -4.263537]];
+    const map = L.map('map', {
+      maxBounds: bounds,
+      maxBoundsViscosity: 1.0,
+      minZoom: 11
+    }).setView([37.77, -4.33], 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap & CartoDB',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(map);
+    const ndviLayers = {
+      abril: L.imageOverlay('ndvi_rasters/NDVI_abril.png', bounds, {opacity: 0.8}),
+      mayo: L.imageOverlay('ndvi_rasters/NDVI_mayo.png', bounds, {opacity: 0.8}),
+      junio: L.imageOverlay('ndvi_rasters/NDVI_junio.png', bounds, {opacity: 0.8}),
+      julio: L.imageOverlay('ndvi_rasters/NDVI_julio.png', bounds, {opacity: 0.8}),
+      agosto: L.imageOverlay('ndvi_rasters/NDVI_agosto.png', bounds, {opacity: 0.8}),
+    };
+    let activeNDVILayer = ndviLayers.abril;
+    activeNDVILayer.addTo(map);
+    document.getElementById("ndviSelect").addEventListener("change", function() {
+      map.removeLayer(activeNDVILayer);
+      activeNDVILayer = ndviLayers[this.value];
+      map.addLayer(activeNDVILayer);
+    });
+
+    let recintosLayer;
+    const ndviFields = ["ZonalSt_22_04.MEAN","ZonalSt_22_05.MEAN","ZonalSt_16_06.MEAN","ZonalSt_16_07.MEAN","ZonalSt_10_08.MEAN"];
+    const meses = ["abril", "mayo", "junio", "julio", "agosto"];
+
+    fetch("Recintos.geojson").then(res => res.json()).then(data => {
+      recintosLayer = L.geoJSON(data, {
+        style: { color: "#66ccff", weight: 2, fillOpacity: 0 },
+        onEachFeature: function (feature, layer) {
+          layer.on("click", function () {
+            const props = feature.properties;
+            const id = props["RecintosFiltrados.ID_RECINTO"];
+            const cultivo = props["RecintosFiltrados.CD_USO"] || "Desconocido";
+            const fecha = document.getElementById("ndviSelect").value;
+            const ndviField = {
+              abril: "ZonalSt_22_04.MEAN",
+              mayo: "ZonalSt_22_05.MEAN",
+              junio: "ZonalSt_16_06.MEAN",
+              julio: "ZonalSt_16_07.MEAN",
+              agosto: "ZonalSt_10_08.MEAN"
+            }[fecha];
+            const ndvi = props[ndviField];
+            const ndviStr = ndvi !== undefined ? ndvi.toFixed(3) : "N/A";
+            const ndviVals = ndviFields.map(f => props[f]);
+            const anomalías = [];
+            for (let i = 1; i < ndviVals.length; i++) {
+              const prev = ndviVals[i - 1];
+              const curr = ndviVals[i];
+              if (typeof prev !== "number" || typeof curr !== "number") continue;
+              if (curr - prev > 0.1) {
+                anomalías.push(`Aumento inusual de NDVI entre ${meses[i - 1]} y ${meses[i]}`);
+              }
+            }
+            const html = `
+              <h3>Recinto ${id}</h3>
+              <p><strong>Cultivo:</strong> ${cultivo}</p>
+              <p><strong>NDVI (${fecha}):</strong> ${ndviStr}</p>
+              ${anomalías.length ? "<p><strong>Anomalías:</strong></p><ul>" + anomalías.map(a => `<li>${a}</li>`).join("") + "</ul>" : ""}
+              <img src="ndvi_graficas/${id}.png" alt="NDVI ${id}">
+            `;
+            document.getElementById("infoContent").innerHTML = html;
+            document.getElementById("infoPanel").style.display = "block";
+            map.fitBounds(layer.getBounds(), { paddingRightTop: [300, 0] });
+          });
+        }
+      }).addTo(map);
+      map.fitBounds(recintosLayer.getBounds());
+    });
+
+    function buscarRecinto() {
+      const id = document.getElementById("recintoInput").value;
+      if (!id || !recintosLayer) return;
+      recintosLayer.eachLayer(layer => {
+        const props = layer.feature.properties;
+        if (props["RecintosFiltrados.ID_RECINTO"] == id) {
+          map.fitBounds(layer.getBounds(), { paddingRightTop: [300, 0] });
+          layer.fire("click");
+        }
+      });
+    }
+
+    function mostrarAnomalias() {
+      if (!recintosLayer) return;
+      recintosLayer.eachLayer(layer => {
+        const props = layer.feature.properties;
+        const ndviVals = ndviFields.map(f => props[f]);
+        for (let i = 1; i < ndviVals.length; i++) {
+          const prev = ndviVals[i - 1];
+          const curr = ndviVals[i];
+          if (typeof prev !== "number" || typeof curr !== "number") continue;
+          if (curr - prev > 0.1) {
+            layer.setStyle({ color: "red", weight: 3 });
+            break;
+          }
+        }
+      });
+    }
+
+    function quitarAnomalias() {
+      if (!recintosLayer) return;
+      recintosLayer.eachLayer(layer => {
+        layer.setStyle({ color: "#66ccff", weight: 2 });
+      });
+    }
+
+    function cerrarPanel() {
+      document.getElementById("infoPanel").style.display = "none";
+    }
+
+    map.on("click", function (e) {
+      if (!e.originalEvent.target.closest('#infoPanel') && !e.originalEvent.target.closest('.leaflet-interactive')) {
+        cerrarPanel();
+      }
+    });
+  </script>
+</body>
+</html>
