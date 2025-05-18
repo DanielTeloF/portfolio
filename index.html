@@ -1,120 +1,31 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Mapa NDVI por parcela</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <style>
-    body {
-      margin: 0;
-      font-family: sans-serif;
-      background-color: #111;
-      color: white;
-    }
-    #map { height: 100vh; width: 100vw; }
-    .leaflet-container { background: #111; }
-    .control-panel {
-      position: absolute;
-      top: 10px;
-      left: 100px;
-      background-color: rgba(0, 0, 0, 0.7);
-      padding: 10px;
-      border-radius: 8px;
-      z-index: 1001;
-    }
-    select, input, button { margin-top: 5px; width: 120px; }
-    #infoPanel {
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 300px;
-      height: 100%;
-      background-color: #1c1c1c;
-      padding: 15px;
-      display: none;
-      overflow-y: auto;
-      border-left: 2px solid #333;
-      z-index: 1002;
-    }
-    #infoPanel h3 { margin-top: 0; }
-    #infoPanel img {
-      width: 100%;
-      border-radius: 6px;
-      border: 1px solid #444;
-      margin-top: 10px;
-    }
-    #closePanel {
-      background: none;
-      border: none;
-      color: white;
-      font-size: 20px;
-      float: right;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <div id="map"></div>
-  <div class="control-panel">
-    <label for="ndviSelect">Visualizar NDVI:</label><br>
-    <select id="ndviSelect">
-      <option value="abril">22/04</option>
-      <option value="mayo">22/05</option>
-      <option value="junio">16/06</option>
-      <option value="julio">16/07</option>
-      <option value="agosto">10/08</option>
-    </select><br><br>
-    <label for="recintoInput">Buscar recinto:</label><br>
-    <input type="text" id="recintoInput" placeholder="ID Recinto"/>
-    <button onclick="buscarRecinto()">Buscar</button><br><br>
-    <label for="cultivoInput">Filtrar por cultivo:</label><br>
-    <input type="text" id="cultivoInput" placeholder="Ej. OLIVAR" /><br>
-    <button onclick="filtrarCultivo()">Aplicar filtro</button>
-    <button onclick="quitarFiltro()">Quitar filtro</button>
-  </div>
-  <div id="infoPanel">
-    <button id="closePanel" onclick="cerrarPanel()">✖</button>
-    <div id="infoContent"></div>
-  </div>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    const bounds = [[37.722664, -4.390214], [37.820108, -4.263537]];
-    const map = L.map('map', {
-      maxBounds: bounds,
-      maxBoundsViscosity: 1.0,
-      minZoom: 11
-    }).setView([37.77, -4.33], 13);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap & CartoDB',
-      subdomains: 'abcd',
-      maxZoom: 19
-    }).addTo(map);
-    const ndviLayers = {
-      abril: L.imageOverlay('ndvi_rasters/NDVI_abril.png', bounds, {opacity: 0.8}),
-      mayo: L.imageOverlay('ndvi_rasters/NDVI_mayo.png', bounds, {opacity: 0.8}),
-      junio: L.imageOverlay('ndvi_rasters/NDVI_junio.png', bounds, {opacity: 0.8}),
-      julio: L.imageOverlay('ndvi_rasters/NDVI_julio.png', bounds, {opacity: 0.8}),
-      agosto: L.imageOverlay('ndvi_rasters/NDVI_agosto.png', bounds, {opacity: 0.8}),
-    };
-    let activeNDVILayer = ndviLayers.abril;
-    activeNDVILayer.addTo(map);
-    document.getElementById("ndviSelect").addEventListener("change", function() {
-      map.removeLayer(activeNDVILayer);
-      activeNDVILayer = ndviLayers[this.value];
-      map.addLayer(activeNDVILayer);
-    });
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daniel Telo | SIG y Medio Ambiente</title>
+    <script src="https://cdn.tailwindcss.com">
+    function filtrarCultivo() {
+      const cultivoFiltro = document.getElementById("cultivoSelect").value.trim().toUpperCase();
+      if (!cultivoFiltro || !recintosLayer) return;
 
-    let recintosLayer;
-    const ndviFields = ["ZonalSt_22_04.MEAN","ZonalSt_22_05.MEAN","ZonalSt_16_06.MEAN","ZonalSt_16_07.MEAN","ZonalSt_10_08.MEAN"];
-    const meses = ["abril", "mayo", "junio", "julio", "agosto"];
+      let ndviTotales = [];
 
-    fetch("Recintos.geojson").then(res => res.json()).then(data => {
-      recintosLayer = L.geoJSON(data, {
-        style: { color: "#66ccff", weight: 2, fillOpacity: 0 },
-        onEachFeature: function (feature, layer) {
-          layer.on("click", function () {
-            const props = feature.properties;
+      recintosLayer.eachLayer(layer => {
+        const props = layer.feature.properties;
+        const cdUso = (props["RecintosFiltrados.CD_USO"] || "").toUpperCase();
+const cultivo = {
+  "FS": "Frutos secos",
+  "FY": "Frutales",
+  "OV": "Olivar",
+  "TA": "Tierras arables"
+}[cdUso] || cdUso;
+
+
+        if (!layer._clickHandler) {
+          // guardar handler original si no existe
+          const clickHandler = function () {
+            const props = layer.feature.properties;
             const id = props["RecintosFiltrados.ID_RECINTO"];
             const cultivo = props["RecintosFiltrados.CD_USO"] || "Desconocido";
             const fecha = document.getElementById("ndviSelect").value;
@@ -128,106 +39,35 @@
             const ndvi = props[ndviField];
             const ndviStr = ndvi !== undefined ? ndvi.toFixed(3) : "N/A";
             const ndviVals = ndviFields.map(f => props[f]);
-            const anomalías = [];
-            for (let i = 1; i < ndviVals.length; i++) {
-              const prev = ndviVals[i - 1];
-              const curr = ndviVals[i];
-              if (typeof prev !== "number" || typeof curr !== "number") continue;
-              if (curr - prev > 0.1) {
-                anomalías.push(`Aumento inusual de NDVI entre ${meses[i - 1]} y ${meses[i]}`);
-              }
-            }
-            // Cálculo de estadísticas
-const ndviValidos = ndviVals.filter(v => typeof v === "number");
-const media = ndviValidos.reduce((a, b) => a + b, 0) / ndviValidos.length;
-const max = Math.max(...ndviValidos);
-const min = Math.min(...ndviValidos);
-const std = Math.sqrt(ndviValidos.reduce((a, b) => a + Math.pow(b - media, 2), 0) / ndviValidos.length);
-const tendencia = ndviValidos[ndviValidos.length - 1] - ndviValidos[0];
 
-// HTML actualizado
-const html = `
-  <h3>Recinto ${id}</h3>
-  <p><strong>Cultivo:</strong> ${cultivo}</p>
-  <p><strong>NDVI (${fecha}):</strong> ${ndviStr}</p>
+            const ndviValidos = ndviVals.filter(v => typeof v === "number");
+            const media = ndviValidos.reduce((a, b) => a + b, 0) / ndviValidos.length;
+            const max = Math.max(...ndviValidos);
+            const min = Math.min(...ndviValidos);
+            const std = Math.sqrt(ndviValidos.reduce((a, b) => a + Math.pow(b - media, 2), 0) / ndviValidos.length);
+            const tendencia = ndviValidos[ndviValidos.length - 1] - ndviValidos[0];
 
-  <h4 style="margin-top: 1em;">📊 Estadísticas NDVI</h4>
-  <ul>
-    <li><strong>Media:</strong> ${media.toFixed(3)}</li>
-    <li><strong>Mínimo:</strong> ${min.toFixed(3)}</li>
-    <li><strong>Máximo:</strong> ${max.toFixed(3)}</li>
-    <li><strong>Desviación típica:</strong> ${std.toFixed(3)}</li>
-    <li><strong>Tendencia:</strong> ${tendencia > 0.01 ? '↑ Positiva' : tendencia < -0.01 ? '↓ Negativa' : '→ Estable'} (${tendencia.toFixed(3)})</li>
-  </ul>
-
-  ${anomalías.length ? "<p><strong>Anomalías:</strong></p><ul>" + anomalías.map(a => `<li>${a}</li>`).join("") + "</ul>" : ""}
-  <img src="ndvi_graficas/${id}.png" alt="NDVI ${id}">
-`;
-
+            const html = `
+              <h3>Recinto ${id}</h3>
+              <p><strong>Cultivo:</strong> ${cultivo}</p>
+              <p><strong>NDVI (${fecha}):</strong> ${ndviStr}</p>
+              <h4 style="margin-top: 1em;">📊 Estadísticas NDVI</h4>
+              <ul>
+                <li><strong>Media:</strong> ${media.toFixed(3)}</li>
+                <li><strong>Mínimo:</strong> ${min.toFixed(3)}</li>
+                <li><strong>Máximo:</strong> ${max.toFixed(3)}</li>
+                <li><strong>Desviación típica:</strong> ${std.toFixed(3)}</li>
+                <li><strong>Tendencia:</strong> ${tendencia > 0.01 ? '↑ Positiva' : tendencia < -0.01 ? '↓ Negativa' : '→ Estable'} (${tendencia.toFixed(3)})</li>
+              </ul>
+              <img src="ndvi_graficas/${id}.png" alt="NDVI ${id}">
+            `;
             document.getElementById("infoContent").innerHTML = html;
             document.getElementById("infoPanel").style.display = "block";
             map.fitBounds(layer.getBounds(), { paddingRightTop: [300, 0] });
-          });
+          };
+          layer._clickHandler = clickHandler;
         }
-      }).addTo(map);
-      map.fitBounds(recintosLayer.getBounds());
-    });
 
-    function buscarRecinto() {
-      const id = document.getElementById("recintoInput").value;
-      if (!id || !recintosLayer) return;
-      recintosLayer.eachLayer(layer => {
-        const props = layer.feature.properties;
-        if (props["RecintosFiltrados.ID_RECINTO"] == id) {
-          map.fitBounds(layer.getBounds(), { paddingRightTop: [300, 0] });
-          layer.fire("click");
-        }
-      });
-    }
-
-    function mostrarAnomalias() {
-      if (!recintosLayer) return;
-      recintosLayer.eachLayer(layer => {
-        const props = layer.feature.properties;
-        const ndviVals = ndviFields.map(f => props[f]);
-        for (let i = 1; i < ndviVals.length; i++) {
-          const prev = ndviVals[i - 1];
-          const curr = ndviVals[i];
-          if (typeof prev !== "number" || typeof curr !== "number") continue;
-          if (curr - prev > 0.1) {
-            layer.setStyle({ color: "red", weight: 3 });
-            break;
-          }
-        }
-      });
-    }
-
-    function quitarAnomalias() {
-      if (!recintosLayer) return;
-      recintosLayer.eachLayer(layer => {
-        layer.setStyle({ color: "#66ccff", weight: 2 });
-      });
-    }
-
-    function cerrarPanel() {
-      document.getElementById("infoPanel").style.display = "none";
-    }
-
-    map.on("click", function (e) {
-      if (!e.originalEvent.target.closest('#infoPanel') && !e.originalEvent.target.closest('.leaflet-interactive')) {
-        cerrarPanel();
-      }
-    });
-  
-    function filtrarCultivo() {
-      const cultivoFiltro = document.getElementById("cultivoInput").value.trim().toUpperCase();
-      if (!cultivoFiltro || !recintosLayer) return;
-
-      let ndviTotales = [];
-
-      recintosLayer.eachLayer(layer => {
-        const props = layer.feature.properties;
-        const cultivo = (props["RecintosFiltrados.CD_USO"] || "").toUpperCase();
         if (cultivo === cultivoFiltro) {
           layer.setStyle({ fillOpacity: 0.3, color: "#66ccff" });
           layer.on("click", layer._clickHandler);
@@ -265,5 +105,130 @@ Desviación: ${std.toFixed(3)}`);
       });
     }
 </script>
-</body>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-zinc-900 text-white">
+    <!-- Header -->
+    <header class="fixed top-0 left-0 w-full bg-zinc-950 shadow z-50">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        <h1 class="text-xl font-bold text-green-500">Daniel Telo</h1>
+        <nav class="space-x-6 text-sm font-medium">
+          <a href="#inicio" class="hover:text-green-400">Inicio</a>
+          <a href="#sobremi" class="hover:text-green-400">Sobre mí</a>
+          <a href="#proyectos" class="hover:text-green-400">Proyectos</a>
+          <a href="#contacto" class="hover:text-green-400">Contacto</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="inicio" class="h-screen bg-cover bg-center relative flex items-center justify-center text-white" style="background-image: url('hero-banner.png'); background-size: cover; background-position: center;">
+      <div class="absolute inset-0 bg-black opacity-60"></div>
+      <div class="relative z-10 text-center px-6">
+        <h2 class="text-4xl md:text-5xl font-bold mb-4">Datos para entender el territorio</h2>
+        <p class="text-lg max-w-2xl mx-auto">SIG · NDVI · Medio Ambiente · Python · SQL</p>
+      </div>
+    </section>
+
+    <!-- Sobre mí en formato rejilla vertical -->
+    <section id="sobremi" class="py-24 px-6 bg-zinc-900">
+      <div class="max-w-6xl mx-auto">
+        <h3 class="text-3xl font-semibold mb-10 text-center text-green-400">Sobre mí</h3>
+        <div class="grid gap-10">
+
+          <!-- Bloque 1 -->
+	<div class="grid md:grid-cols-2 gap-6 items-center">
+  		<div>
+  	  <h4 class="text-green-400 font-semibold text-xl mb-2">Estudiante de Ingeniería Agroambiental</h4>
+	    <p class="text-gray-300 text-sm">Formación en medio ambiente y tecnologías aplicadas al territorio.</p>
+	  </div>
+	  <img src="ingenieria-agroambiental.png" alt="Bombilla con planta en entorno degradado"
+ 	   class="w-[100%] max-w-none h-auto rounded-lg shadow-lg object-cover ml-auto" />
+	</div>
+
+
+          <!-- Bloque 2 -->
+	<div class="grid md:grid-cols-2 gap-6 items-center">
+ 	 <img src="sig-cartografia.png" alt="Análisis SIG, cartografía y teledetección"
+  	  class="w-[100%] max-w-none h-auto rounded-lg shadow-lg object-cover mr-auto" />
+ 	 <div>
+ 	   <h4 class="text-green-400 font-semibold text-xl mb-2">SIG y análisis espacial</h4>
+ 	   <p class="text-gray-300 text-sm">Gran interés por la cartografía, teledetección y visualización de datos geográficos.</p>
+ 	 </div>
+	</div>
+
+
+          <!-- Bloque 3 -->
+	<div class="grid md:grid-cols-2 gap-6 items-center">
+ 	 <div>
+ 	   <h4 class="text-green-400 font-semibold text-xl mb-2">Desarrollo sostenible</h4>
+ 	   <p class="text-gray-300 text-sm">Comprometido con soluciones ambientales equilibradas y eficientes.</p>
+	  </div>
+ 	 <img src="desarrollo-sostenible.png" alt="Placas solares y cabras pastando - desarrollo sostenible"
+ 	   class="w-[100%] max-w-none h-auto rounded-lg shadow-lg object-cover ml-auto" />
+	</div>
+
+
+          <!-- Bloque 4 -->
+	<div class="grid md:grid-cols-2 gap-6 items-center">
+  	<img src="python-sql.png" alt="Código Python y SQL en pantalla"
+  	  class="w-[100%] max-w-none h-auto rounded-lg shadow-lg object-cover mr-auto" />
+ 	 <div>
+ 	   <h4 class="text-green-400 font-semibold text-xl mb-2">Python y SQL</h4>
+ 	   <p class="text-gray-300 text-sm">Conocimientos aplicados a automatización y análisis de datos espaciales.</p>
+	  </div>
+	</div>
+
+
+          <!-- Bloque 5 -->
+	<div class="grid md:grid-cols-2 gap-6 items-center">
+	  <div>
+	    <h4 class="text-green-400 font-semibold text-xl mb-2">Resolución de problemas</h4>
+	    <p class="text-gray-300 text-sm">Perfil analítico, proactivo y con orientación a resultados.</p>
+	  </div>
+ 	 <img src="resolucion-problemas.png" alt="Espacio de trabajo con terminales y análisis de datos"
+ 	   class="w-[100%] max-w-none h-auto rounded-lg shadow-lg object-cover ml-auto" />
+	</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Proyectos destacados -->
+    <section id="proyectos" class="py-24 px-6 bg-zinc-950">
+      <div class="max-w-5xl mx-auto text-center">
+        <h3 class="text-3xl font-semibold mb-10 text-green-400">Proyectos destacados</h3>
+        <div class="grid md:grid-cols-2 gap-8">
+          <div class="bg-zinc-800 border border-zinc-700 rounded-lg shadow p-6 text-left">
+            <h4 class="text-xl font-bold mb-2 text-white">NDVI de Baena (Córdoba)</h4>
+            <p class="text-gray-400 mb-4">Análisis del índice de vegetación con datos satelitales y visor interactivo Leaflet.</p>
+            <a href="https://danieltelof.github.io/portfolio/" target="_blank" class="inline-block mt-2 text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition">Ver visor</a>
+          </div>
+          <div class="bg-zinc-800 border border-zinc-700 rounded-lg shadow p-6 text-left flex items-center justify-center text-gray-500 italic">
+            Próximamente
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contacto -->
+    <section id="contacto" class="py-24 px-6 bg-zinc-900">
+      <div class="max-w-3xl mx-auto text-center">
+        <h3 class="text-3xl font-semibold mb-6 text-green-400">Contacto</h3>
+        <p class="text-gray-300 text-lg mb-2">📧 Email: <a href="mailto:Danieltelof@gmail.com" class="text-green-400 hover:underline">Danieltelof@gmail.com</a></p>
+        <p class="text-gray-300 text-lg">🔗 LinkedIn: <a href="https://www.linkedin.com/in/daniel-telo-fernandez/" target="_blank" rel="noopener noreferrer" class="text-green-400 hover:underline">daniel-telo-fernandez</a></p>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center py-6 text-sm text-gray-500 border-t border-zinc-800">
+      &copy; 2025 Daniel Telo. Todos los derechos reservados.
+    </footer>
+  </body>
 </html>
