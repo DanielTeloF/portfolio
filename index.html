@@ -135,13 +135,33 @@
                 anomalías.push(`Aumento inusual de NDVI entre ${meses[i - 1]} y ${meses[i]}`);
               }
             }
-            const html = `
-              <h3>Recinto ${id}</h3>
-              <p><strong>Cultivo:</strong> ${cultivo}</p>
-              <p><strong>NDVI (${fecha}):</strong> ${ndviStr}</p>
-              ${anomalías.length ? "<p><strong>Anomalías:</strong></p><ul>" + anomalías.map(a => `<li>${a}</li>`).join("") + "</ul>" : ""}
-              <img src="ndvi_graficas/${id}.png" alt="NDVI ${id}">
-            `;
+            // Cálculo de estadísticas
+const ndviValidos = ndviVals.filter(v => typeof v === "number");
+const media = ndviValidos.reduce((a, b) => a + b, 0) / ndviValidos.length;
+const max = Math.max(...ndviValidos);
+const min = Math.min(...ndviValidos);
+const std = Math.sqrt(ndviValidos.reduce((a, b) => a + Math.pow(b - media, 2), 0) / ndviValidos.length);
+const tendencia = ndviValidos[ndviValidos.length - 1] - ndviValidos[0];
+
+// HTML actualizado
+const html = `
+  <h3>Recinto ${id}</h3>
+  <p><strong>Cultivo:</strong> ${cultivo}</p>
+  <p><strong>NDVI (${fecha}):</strong> ${ndviStr}</p>
+
+  <h4 style="margin-top: 1em;">📊 Estadísticas NDVI</h4>
+  <ul>
+    <li><strong>Media:</strong> ${media.toFixed(3)}</li>
+    <li><strong>Mínimo:</strong> ${min.toFixed(3)}</li>
+    <li><strong>Máximo:</strong> ${max.toFixed(3)}</li>
+    <li><strong>Desviación típica:</strong> ${std.toFixed(3)}</li>
+    <li><strong>Tendencia:</strong> ${tendencia > 0.01 ? '↑ Positiva' : tendencia < -0.01 ? '↓ Negativa' : '→ Estable'} (${tendencia.toFixed(3)})</li>
+  </ul>
+
+  ${anomalías.length ? "<p><strong>Anomalías:</strong></p><ul>" + anomalías.map(a => `<li>${a}</li>`).join("") + "</ul>" : ""}
+  <img src="ndvi_graficas/${id}.png" alt="NDVI ${id}">
+`;
+
             document.getElementById("infoContent").innerHTML = html;
             document.getElementById("infoPanel").style.display = "block";
             map.fitBounds(layer.getBounds(), { paddingRightTop: [300, 0] });
