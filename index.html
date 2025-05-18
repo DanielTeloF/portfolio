@@ -300,7 +300,9 @@ const html = `
         const min = Math.min(...ndviTotales);
         const max = Math.max(...ndviTotales);
         const std = Math.sqrt(ndviTotales.reduce((a,b) => a + Math.pow(b - media, 2), 0) / ndviTotales.length);
-        document.getElementById("estadisticasCultivo").innerHTML = `
+        const statsBox = document.getElementById("estadisticasCultivo");
+statsBox.style.display = 'block';
+statsBox.innerHTML = `
       <strong>📊 Estadísticas NDVI para ${cultivoFiltro}</strong><br>
       Media: ${media.toFixed(3)}<br>
       Máximo: ${max.toFixed(3)}<br>
@@ -322,5 +324,5 @@ const html = `
       });
     }
 </script>
-<div id="estadisticasCultivo" style="position: absolute; top: 10px; left: 300px; background-color: rgba(0,0,0,0.95); padding: 12px; border-radius: 8px; color: white; font-size: 14px; z-index: 1001; min-width: 180px; max-width: 250px; box-shadow: 0 0 10px rgba(0,0,0,0.8);">Selecciona un cultivo para ver estadísticas aquí.</div></body>
+<div id="estadisticasCultivo" style="position: absolute; bottom: 0; left: 100px; background-color: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; color: white; font-size: 14px; z-index: 1001;">Selecciona un cultivo para ver estadísticas aquí.</div><div id="estadisticasCultivo" style="position: absolute; top: 160px; left: 100px; background-color: rgba(0,0,0,0.95); padding: 12px; border-radius: 8px; color: white; font-size: 14px; z-index: 1001; min-width: 200px; max-width: 280px; display: none; box-shadow: 0 0 10px rgba(0,0,0,0.8);"></div></body>
 </html>
