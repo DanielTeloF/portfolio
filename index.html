@@ -1,11 +1,12 @@
 <!DOCTYPE html>
+
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>Mapa NDVI por parcela</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <style>
+<meta charset="utf-8"/>
+<title>Mapa NDVI por parcela</title>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
+<style>
     body {
       margin: 0;
       font-family: sans-serif;
@@ -55,36 +56,36 @@
   </style>
 </head>
 <body>
-  <div id="map"></div>
-  <div class="control-panel">
-    <label for="ndviSelect">Visualizar NDVI:</label><br>
-    <select id="ndviSelect">
-      <option value="abril">22/04</option>
-      <option value="mayo">22/05</option>
-      <option value="junio">16/06</option>
-      <option value="julio">16/07</option>
-      <option value="agosto">10/08</option>
-    </select><br><br>
-    <label for="recintoInput">Buscar recinto:</label><br>
-    <input type="text" id="recintoInput" placeholder="ID Recinto"/>
-    <button onclick="buscarRecinto()">Buscar</button><br><br>
-    <label for="cultivoSelect">Filtrar por cultivo:</label><br>
-    <select id="cultivoSelect">
-      <option value="">-- Selecciona --</option>
-      <option value="FS">Frutos secos</option>
-      <option value="FY">Frutales</option>
-      <option value="OV">Olivar</option>
-      <option value="TA">Tierras arables</option>
-    </select><br>
-    <button onclick="filtrarCultivo()">Aplicar filtro</button>
-    <button onclick="quitarFiltro()">Quitar filtro</button>
-  </div>
-  <div id="infoPanel">
-    <button id="closePanel" onclick="cerrarPanel()">✖</button>
-    <div id="infoContent"></div>
-  </div>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
+<div id="map"></div>
+<div class="control-panel">
+<label for="ndviSelect">Visualizar NDVI:</label><br/>
+<select id="ndviSelect">
+<option value="abril">22/04</option>
+<option value="mayo">22/05</option>
+<option value="junio">16/06</option>
+<option value="julio">16/07</option>
+<option value="agosto">10/08</option>
+</select><br/><br/>
+<label for="recintoInput">Buscar recinto:</label><br/>
+<input id="recintoInput" placeholder="ID Recinto" type="text"/>
+<button onclick="buscarRecinto()">Buscar</button><br/><br/>
+<label for="cultivoSelect">Filtrar por cultivo:</label><br/>
+<select id="cultivoSelect">
+<option value="">-- Selecciona --</option>
+<option value="FS">Frutos secos</option>
+<option value="FY">Frutales</option>
+<option value="OV">Olivar</option>
+<option value="TA">Tierras arables</option>
+</select><br/>
+<button onclick="filtrarCultivo()">Aplicar filtro</button>
+<button onclick="quitarFiltro()">Quitar filtro</button>
+</div>
+<div id="infoPanel">
+<button id="closePanel" onclick="cerrarPanel()">✖</button>
+<div id="infoContent"></div>
+</div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
     const bounds = [[37.722664, -4.390214], [37.820108, -4.263537]];
     const map = L.map('map', {
       maxBounds: bounds,
@@ -299,11 +300,13 @@ const html = `
         const min = Math.min(...ndviTotales);
         const max = Math.max(...ndviTotales);
         const std = Math.sqrt(ndviTotales.reduce((a,b) => a + Math.pow(b - media, 2), 0) / ndviTotales.length);
-        alert(`📊 Estadísticas NDVI para ${cultivoFiltro}:
-Media: ${media.toFixed(3)}
-Máximo: ${max.toFixed(3)}
-Mínimo: ${min.toFixed(3)}
-Desviación: ${std.toFixed(3)}`);
+        document.getElementById("estadisticasCultivo").innerHTML = `
+      <strong>📊 Estadísticas NDVI para ${cultivoFiltro}</strong><br>
+      Media: ${media.toFixed(3)}<br>
+      Máximo: ${max.toFixed(3)}<br>
+      Mínimo: ${min.toFixed(3)}<br>
+      Desviación típica: ${std.toFixed(3)}
+    `;
       } else {
         alert("No se encontraron parcelas con ese cultivo.");
       }
@@ -319,5 +322,5 @@ Desviación: ${std.toFixed(3)}`);
       });
     }
 </script>
-</body>
+<div id="estadisticasCultivo" style="position: absolute; bottom: 0; left: 100px; background-color: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; color: white; font-size: 14px; z-index: 1001;">Selecciona un cultivo para ver estadísticas aquí.</div></body>
 </html>
