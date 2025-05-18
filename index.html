@@ -68,8 +68,10 @@
     <label for="recintoInput">Buscar recinto:</label><br>
     <input type="text" id="recintoInput" placeholder="ID Recinto"/>
     <button onclick="buscarRecinto()">Buscar</button><br><br>
-    <button onclick="mostrarAnomalias()">Mostrar aumentos NDVI</button>
-    <button onclick="quitarAnomalias()">Desmarcar</button>
+    <label for="cultivoInput">Filtrar por cultivo:</label><br>
+    <input type="text" id="cultivoInput" placeholder="Ej. OLIVAR" /><br>
+    <button onclick="filtrarCultivo()">Aplicar filtro</button>
+    <button onclick="quitarFiltro()">Quitar filtro</button>
   </div>
   <div id="infoPanel">
     <button id="closePanel" onclick="cerrarPanel()">✖</button>
@@ -216,6 +218,52 @@ const html = `
         cerrarPanel();
       }
     });
-  </script>
+  
+    function filtrarCultivo() {
+      const cultivoFiltro = document.getElementById("cultivoInput").value.trim().toUpperCase();
+      if (!cultivoFiltro || !recintosLayer) return;
+
+      let ndviTotales = [];
+
+      recintosLayer.eachLayer(layer => {
+        const props = layer.feature.properties;
+        const cultivo = (props["RecintosFiltrados.CD_USO"] || "").toUpperCase();
+        if (cultivo === cultivoFiltro) {
+          layer.setStyle({ fillOpacity: 0.3, color: "#66ccff" });
+          layer.on("click", layer._clickHandler);
+          const ndviVals = ndviFields.map(f => props[f]).filter(v => typeof v === "number");
+          ndviTotales.push(...ndviVals);
+        } else {
+          layer.setStyle({ fillOpacity: 0.05, color: "#333" });
+          layer.off("click");
+        }
+      });
+
+      if (ndviTotales.length > 0) {
+        const media = ndviTotales.reduce((a,b) => a + b, 0) / ndviTotales.length;
+        const min = Math.min(...ndviTotales);
+        const max = Math.max(...ndviTotales);
+        const std = Math.sqrt(ndviTotales.reduce((a,b) => a + Math.pow(b - media, 2), 0) / ndviTotales.length);
+
+        alert(`📊 Estadísticas NDVI para ${cultivoFiltro}:
+Media: ${media.toFixed(3)}
+Máximo: ${max.toFixed(3)}
+Mínimo: ${min.toFixed(3)}
+Desviación: ${std.toFixed(3)}`);
+      } else {
+        alert("No se encontraron parcelas con ese cultivo.");
+      }
+    }
+
+    function quitarFiltro() {
+      if (!recintosLayer) return;
+      recintosLayer.eachLayer(layer => {
+        layer.setStyle({ fillOpacity: 0, color: "#66ccff" });
+        if (layer._clickHandler) {
+          layer.on("click", layer._clickHandler);
+        }
+      });
+    }
+</script>
 </body>
 </html>
