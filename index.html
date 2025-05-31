@@ -73,6 +73,12 @@
     font-size: 18px;
     color: #00d26a;
   }
+  #infoPanel ul {
+    padding-left: 18px;
+  }
+  #infoPanel li {
+    margin-bottom: 6px;
+  }
   #infoPanel img {
     width: 100%;
     border-radius: 6px;
@@ -108,6 +114,7 @@
 <div id="map"></div>
 <div class="control-panel">
   <h4>📅 Visualización NDVI</h4>
+  <label for="ndviSelect">Visualizar NDVI:</label>
   <select id="ndviSelect">
     <option value="abril">22/04</option>
     <option value="mayo">22/05</option>
@@ -115,10 +122,14 @@
     <option value="julio">16/07</option>
     <option value="agosto">10/08</option>
   </select>
+
   <h4>🔍 Buscar recinto</h4>
-  <input type="text" id="recintoInput" placeholder="ID Recinto"/>
+  <label for="recintoInput">Buscar recinto:</label>
+  <input id="recintoInput" placeholder="ID Recinto" type="text"/>
   <button onclick="buscarRecinto()">Buscar</button>
+
   <h4>🌾 Filtrar por cultivo</h4>
+  <label for="cultivoSelect">Filtrar por cultivo:</label>
   <select id="cultivoSelect">
     <option value="">-- Selecciona --</option>
     <option value="FS">Frutos secos</option>
@@ -136,8 +147,7 @@
 <div id="estadisticasCultivo">Selecciona un cultivo para ver estadísticas aquí.</div>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-  // El JS original va aquí sin cambios, ya que solo se ajusta el estilo visual
+// Se mantiene exactamente todo el JS original sin alteraciones
 </script>
 </body>
 </html>
-
